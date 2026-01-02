@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Staff Duty Allocation</title>
+    <style>
+        body { font-family: Arial; background:#f4f6f8; padding:30px }
+        .box { background:white; padding:20px; margin-bottom:20px; border-radius:8px }
+        input, select, button { padding:8px; margin:5px }
+        pre { background:#eee; padding:10px; max-height:400px; overflow:auto }
+    </style>
+</head>
+<body>
+
+<h1>Smart Staff Duty Allocation System</h1>
+
+<div class="box">
+    <h3>Add / Update Staff</h3>
+    <input id="staff_id" placeholder="Staff ID">
+    <input id="staff_name" placeholder="Staff Name">
+    <input id="department" placeholder="Department">
+    <select id="busy">
+        <option value="false">Free (9–10)</option>
+        <option value="true">Busy (9–10)</option>
+    </select>
+    <button onclick="saveStaff()">Save Staff</button>
+</div>
+
+<div class="box">
+  <h3>Generate Monthly Schedule</h3>
+
+  <label>Select Month:</label>
+  <input type="month" id="gen_month" value="2026-01">
+
+  <button onclick="generateSchedule()">Generate</button>
+
+  <pre id="gen_output"></pre>
+</div>
+
+<div class="box">
+  <h3>View Monthly Assignments</h3>
+
+  <label>Select Month:</label>
+  <input type="month" id="view_month" value="2026-01">
+
+  <button onclick="viewSchedule()">View</button>
+
+  <pre id="view_output"></pre>
+</div>
+
+<div class="box">
+  <h3>Staff Priority Status</h3>
+
+  <button onclick="viewPriority()">Refresh Priority</button>
+
+  <pre id="priority_output"></pre>
+</div>
+
+<div class="box danger">
+  <h3>⚠️ Reset All Staff Priority</h3>
+
+  <p>
+    This will reset <b>priority_count = 0</b> for <b>ALL staffs</b>.<br>
+    Type <b>CONFIRM</b> to proceed.
+  </p>
+
+  <input type="text" id="confirm_text" placeholder="Type CONFIRM">
+
+  <button onclick="resetPriority()" style="background:red;color:white;">
+    Reset Priority
+  </button>
+
+  <pre id="reset_output"></pre>
+</div>
+
+<div class="box danger">
+  <h3>🗑️ Delete Monthly Schedule</h3>
+
+  <input type="month" id="delete_month">
+  <input type="text" id="delete_confirm" placeholder="Type CONFIRM">
+
+  <button onclick="deleteMonth()" style="background:red;color:white;">
+    Delete Month
+  </button>
+
+  <pre id="delete_output"></pre>
+</div>
+
+
+<script>
+function saveStaff() {
+    fetch("/staff", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+            staff_id: staff_id.value,
+            staff_name: staff_name.value,
+            department: department.value,
+            busy_9_10: busy.value === "true"
+        })
+    })
+    .then(r => r.json())
+    .then(d => alert(d.message || d.error));
+}
+
+function generateSchedule() {
+  const month = document.getElementById("gen_month").value;
+
+  fetch("/schedule", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ month })
+  })
+  .then(res => res.json())
+  .then(data => {
+    gen_output.textContent = JSON.stringify(data, null, 2);
+  });
+}
+
+function viewSchedule() {
+  const month = document.getElementById("view_month").value;
+
+  fetch(`/schedule/${month}`)
+    .then(res => res.json())
+    .then(data => {
+      view_output.textContent = JSON.stringify(data, null, 2);
+    });
+}
+
+function viewPriority() {
+  fetch("/staffs")
+    .then(res => res.json())
+    .then(data => {
+      priority_output.textContent = JSON.stringify(data, null, 2);
+    });
+}
+
+function resetPriority() {
+  const confirmation = document.getElementById("confirm_text").value;
+
+  if (confirmation !== "CONFIRM") {
+    alert("You must type CONFIRM exactly to proceed.");
+    return;
+  }
+
+  fetch("/reset-priority", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ confirmation })
+  })
+  .then(res => res.json())
+  .then(data => {
+    reset_output.textContent = JSON.stringify(data, null, 2);
+    alert("Priority reset completed");
+  })
+  .catch(err => {
+    alert("Error occurred");
+  });
+}
+
+function deleteMonth() {
+  const month = document.getElementById("delete_month").value;
+  const confirmation = document.getElementById("delete_confirm").value;
+
+  if (confirmation !== "CONFIRM") {
+    alert("Type CONFIRM exactly");
+    return;
+  }
+
+  fetch("/delete-month", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ month, confirmation })
+  })
+  .then(res => res.json())
+  .then(data => {
+    delete_output.textContent = JSON.stringify(data, null, 2);
+  });
+}
+
+</script>
+
+</body>
+</html>
